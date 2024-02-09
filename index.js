@@ -1,66 +1,129 @@
-const db = require('./config/connect');
-const inquirer = require("inquirer")
+const db = require("./config/connect");
+const inquirer = require("inquirer");
 
-const Prompter = require('./lib/Prompter');
-const Queries = require('./lib/Queries');
+const Prompter = require("./lib/Prompter");
+const Queries = require("./lib/Queries");
 
 const prompter = new Prompter();
 const queries = new Queries();
 
-// const mainMenuQuery = {
-//     msg: 'SELECT AN ACTION.',
-//     opts: [
-//         {name: 'View all departments', value: 0},
-//         {name: 'View all roles', value: 1},
-//         {name: 'View all employees', value: 2},
-//         {name: 'Add a department', value: 3},
-//         {name: 'Add a role', value: 4},
-//         {name: 'Add an employee', value: 5},
-//         {name: 'Update an employee role', value: 6},
-//     ],
-// }
-
-function viewDepartments() {
-    const table = queries.retrieve('departments')
-    .then(() => console.log(table));
+async function viewTable(input) {
+  try {
+    const data =  await selectAll(input);
+    console.table(data);
+  } catch (err) {
+    console.log(err)
+  }
 }
 
+function selectAll(input) {
+  return new Promise((resolve, reject) => {
+    db.query(`SELECT * FROM ${input};`, (err, data) => {
+      if (err) {
+        console.log(err);
+        reject(err);
+      } else {
+        resolve(data);
+      }
+    });
+  });
+}
+
+// function addDepartment() {
+//   prompter.inputPrompt("Enter Department Name").then((data) => {
+//     const sql = `INSERT INTO departments (name) VALUES (?)`;
+//     db.query(sql, data.result, (err, result) => {
+//       console.log("success");
+//     });
+//   });
+// }
+
+async function addDepartment() {
+  const input = await prompter.inputPrompt('Enter Department Name');
+  db.query(`INSERT INTO departments (name) VALUES (?)`, input, (err, data) => {
+    if (err) console.log(err.message);
+    console.log('Successfully added department.');
+  });
+}
+
+async function addRole() {
+  // Create array for the role and variable for departments
+  const role = {};
+  let departments;
+  // query to get all departments
+  try {
+    const depts = await selectAll('departments');
+    // const deptNames = depts.map(dept => dept.name);
+    departments = depts
+    getDept(departments);
+    return depts;
+  } catch (err) {
+    console.log('Error:', err);
+  }
+  // Have user select a department for the role
+  async function getDept(input) {
+    const dept = await prompter.listPrompt({msg: 'Add the department', opts: input});
+    role.id = departments.find(el => el.name === dept).id;
+    getRoleTitle();
+  }
+  // Get user input for name and salary
+  async function getRoleTitle() {
+    const title = await prompter.inputPrompt('Enter role title');
+    role.title = title;
+    getRoleSalary();
+  }
+  
+  async function getRoleSalary() {
+    const salary = await prompter.numberPrompt('Enter salary');
+    role.salary = salary;
+    inputRole() 
+  }
+
+  // Throw it all into the database
+  async function inputRole() {
+    db.query(`INSERT INTO roles (title, salary, department_id) VALUES (?, ?, ?);`, [role.title, role.salary, role.id], (err, data) => {
+      if (err) console.log(err.message);
+      console.log('Successfully added role.');
+    });
+  }
+}
+// addRole();
+
+
 async function mainMenuSelection() {
-    const selection = await prompter.listPrompt(prompter.mainMenuQuery);
-    switch (selection) {
-        case 'View all departments':
-            // query mysql for the departments table
-            // display it
-            viewDepartments();
-            break;
-    
-        case 'View all roles':
-            console.log('one');
-            break;
-    
-        case 2:
-            console.log('two');
-            break;
-    
-        case 3:
-            console.log('three');
-            break;
-    
-        case 4:
-            console.log('four');
-            break;
-    
-        case 5:
-            console.log('five');
-            break;
-    
-        case 6:
-            console.log('six');
-            break;
-    
-        default:
-            break;
-    }
+  const selection = await prompter.listPrompt(prompter.mainMenuQuery);
+  switch (selection) {
+    case "View all departments":
+      viewTable("departments");
+      break;
+
+    case "View all roles":
+      viewTable("roles");
+      break;
+
+    case "View all employees":
+      viewTable("employees");
+      break;
+
+    case "Add a department":
+      addDepartment();
+      break;
+
+    case "Add a role":
+      addRole();
+      break;
+
+    case 'Add an employee':
+      console.log("five");
+      break;
+
+    case 6:
+      console.log("six");
+      break;
+
+    default:
+      break;
+  }
 }
 
 mainMenuSelection();
