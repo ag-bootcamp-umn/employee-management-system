@@ -42,8 +42,8 @@ async function mainMenuSelection() {
       queries.addEmployee();
       break;
 
-    case 6:
-      console.log("six");
+    case "Update an employee role":
+      queries.updateEmployeeRole();
       break;
 
     default:
@@ -51,5 +51,5 @@ async function mainMenuSelection() {
   }
 }
 
-mainMenuSelection();
-// queries.addRole();
+// mainMenuSelection();
+queries.updateEmployeeRole();
